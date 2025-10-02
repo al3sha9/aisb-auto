@@ -16,33 +16,15 @@ export default function AdminLoginPage() {
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [redirecting, setRedirecting] = useState(false);
 	const router = useRouter();
-    const { login, isAuthenticated, loading: authLoading } = useAuth();
+    const { login } = useAuth();
 
-	// Handle redirect if already authenticated
+	// Check if already logged in
 	useEffect(() => {
-		if (!authLoading && isAuthenticated && !redirecting) {
-			setRedirecting(true);
-			setTimeout(() => {
-				router.replace('/admin/dashboard');
-			}, 100);
+		if (typeof window !== 'undefined' && localStorage.getItem('admin_access_token')) {
+			router.push('/admin/dashboard');
 		}
-	}, [isAuthenticated, authLoading, redirecting, router]);
-
-	// Show loading if auth is being checked or redirecting
-	if (authLoading || redirecting) {
-		return (
-			<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-				<div className="text-center">
-					<Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-					<p className="text-slate-600">
-						{redirecting ? "Redirecting to dashboard..." : "Checking authentication..."}
-					</p>
-				</div>
-			</div>
-		);
-	}
+	}, [router]);
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -58,8 +40,9 @@ export default function AdminLoginPage() {
 			
             if (res.ok) {
                 const data = await res.json();
-                // Use the async login function which handles the redirect
-                await login(data.access_token);
+                login(data.access_token);
+                // Simple redirect
+                window.location.href = '/admin/dashboard';
             } else {
 				const data = await res.json();
 				setError(data.detail || "Invalid credentials");
