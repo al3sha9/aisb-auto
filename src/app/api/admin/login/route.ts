@@ -6,9 +6,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password } = body;
 
-    // In a real application, you would verify the email and password against a database.
-    // For now, we'll just return a dummy token.
-    if (email === "admin@example.com" && password === "password") {
+    // Check against admin credentials
+    const adminEmail = "ali@typs.dev";
+    const adminPassword = process.env.ADMIN_PASSWORD || "123";
+    
+    if (email === adminEmail && password === adminPassword) {
       return NextResponse.json({ access_token: "dummy-admin-token" }, { status: 200 });
     } else {
       return NextResponse.json({ detail: "Invalid credentials" }, { status: 401 });
