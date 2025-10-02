@@ -44,8 +44,36 @@ export default function NewQuizPage() {
         throw error;
       }
 
-      toast.success("Quiz created successfully!", { id: toastId });
-      router.push(`/admin/quizzes/${data[0].id}`);
+      if (!data || data.length === 0) {
+        throw new Error("Quiz creation failed: No data returned.");
+      }
+
+      toast.success("Quiz created successfully! Now generating questions...", { id: toastId });
+
+      const quizId = data[0].id;
+
+      const generateResponse = await fetch("/api/quizzes/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          quizId,
+          numQuestions,
+          difficulty,
+          topics: topics.split(",").map((t) => t.trim()),
+          timePerQuestion,
+          type,
+        }),
+      });
+
+      if (!generateResponse.ok) {
+        const errorData = await generateResponse.json();
+        throw new Error(errorData.error || "Failed to generate questions");
+      }
+
+      toast.success("Questions generated successfully!", { id: toastId });
+      router.push(`/admin/quizzes/${quizId}`);
     } catch (error) { 
       toast.error(`Failed to create quiz: ${error.message}`, { id: toastId });
     } finally {

@@ -1,9 +1,10 @@
 "use client"
+import { supabase } from "@/lib/supabase-client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -11,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { 
+import {
   Trophy,
   User,
   Clock,
@@ -31,7 +32,7 @@ interface QuizResult {
     email: string
   }
   quiz: {
-    title: string
+    name: string
   }
   score: number
   total_questions: number
@@ -49,37 +50,100 @@ export default function QuizResultsPage() {
   const [selectedStudents, setSelectedStudents] = useState<QuizResult[]>([])
   const [emailsSent, setEmailsSent] = useState(false)
 
+
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const token = localStorage.getItem('admin_token')
-        if (!token) {
-          setError('No authentication token found')
-          return
+        // First, get all answers with student and quiz information
+        const { data: answersData, error: answersError } = await supabase
+          .from("answers")
+          .select("*, students(name, email), questions(quiz_id, quizzes(name))");
+
+        if (answersError) {
+          throw answersError;
         }
 
-        const response = await fetch('http://localhost:8000/api/admin/quiz-results', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        // Get quiz information with total question counts
+        const { data: quizzesData, error: quizzesError } = await supabase
+          .from("quizzes")
+          .select("id, name, num_questions");
+
+        if (quizzesError) {
+          throw quizzesError;
+        }
+
+        // Create a map of quiz_id to quiz info for easy lookup
+        const quizMap = quizzesData.reduce((acc: any, quiz: any) => {
+          acc[quiz.id] = quiz;
+          return acc;
+        }, {});
+
+        // Group answers by student and quiz
+        const studentQuizResults = answersData.reduce((acc: any, answer: any) => {
+          const quizId = answer.questions.quiz_id;
+          const key = `${answer.student_id}-${quizId}`;
+          
+          if (!acc[key]) {
+            acc[key] = {
+              student_id: answer.student_id,
+              student: answer.students,
+              quiz_id: quizId,
+              quiz: {
+                name: answer.questions.quizzes.name
+              },
+              correctAnswers: 0,
+              totalAnswered: 0,
+              completed_at: answer.created_at,
+            };
           }
-        })
+          
+          acc[key].totalAnswered += 1;
+          if (answer.is_correct) {
+            acc[key].correctAnswers += 1;
+          }
+          
+          // Keep the latest completion time
+          if (new Date(answer.created_at) > new Date(acc[key].completed_at)) {
+            acc[key].completed_at = answer.created_at;
+          }
+          
+          return acc;
+        }, {});
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch results')
-        }
+        // Format results for display
+        const formattedResults = Object.values(studentQuizResults).map((result: any) => {
+          const quiz = quizMap[result.quiz_id];
+          const totalQuestions = quiz ? quiz.num_questions : result.totalAnswered;
+          const score = result.correctAnswers;
+          const percentage = totalQuestions > 0 ? (score / totalQuestions) * 100 : 0;
 
-        const data = await response.json()
-        setResults(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load results')
+          return {
+            id: `${result.student_id}-${result.quiz_id}`,
+            student: {
+              name: result.student.name,
+              email: result.student.email,
+            },
+            quiz: {
+              name: result.quiz.name,
+            },
+            score: score,
+            total_questions: totalQuestions,
+            percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal place
+            time_taken_minutes: null, // Not available in current schema
+            completed_at: result.completed_at,
+          };
+        });
+
+        setResults(formattedResults);
+      } catch (err: any) {
+        setError(err.message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchResults()
-  }, [])
+    fetchResults();
+  }, []);
 
   const getScoreBadge = (percentage: number) => {
     if (percentage >= 90) {
@@ -104,36 +168,28 @@ export default function QuizResultsPage() {
     setSuccess(null)
 
     try {
-      const token = localStorage.getItem('admin_token')
-      if (!token) {
-        setError('No authentication token found')
-        return
-      }
-
-      // Call CrewAI agent to select top 10% students
-      const response = await fetch('http://localhost:8000/api/agents/select-top-students/execute', {
+      // Call API route to select top students and send emails
+      const response = await fetch('/api/quizzes/score-and-notify', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          percentage: 10,
-          video_topic: "Why you are the best candidate for AISB"
+          // No specific body needed for now, as the API route fetches all answers
         })
       })
 
       if (!response.ok) {
-        throw new Error('Failed to select top students')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to select top students')
       }
 
-      const result = await response.json()
-      setSelectedStudents(result.selected_students || [])
+      // Assuming the API route handles the selection and email sending
+      setSuccess(`Successfully initiated scoring and notification process. Top students will receive email invitations.`)
       setEmailsSent(true)
-      setSuccess(`Successfully selected ${result.selected_students?.length || 0} top students and sent video submission invitations!`)
-      
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to select students')
+
+    } catch (err: any) {
+      setError(err.message)
     } finally {
       setSelecting(false)
     }
@@ -151,7 +207,7 @@ export default function QuizResultsPage() {
 
   // Calculate statistics
   const totalResults = results.length
-  const averageScore = totalResults > 0 
+  const averageScore = totalResults > 0
     ? (results.reduce((sum, result) => sum + result.percentage, 0) / totalResults)
     : 0
   const passRate = totalResults > 0
@@ -343,7 +399,7 @@ export default function QuizResultsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="font-medium">{result.quiz?.title || 'Untitled Quiz'}</div>
+                      <div className="font-medium">{result.quiz?.name || 'Untitled Quiz'}</div>
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">

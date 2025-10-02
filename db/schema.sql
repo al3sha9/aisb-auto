@@ -43,8 +43,11 @@ CREATE TABLE answers (
 CREATE TABLE video_submissions (
     id SERIAL PRIMARY KEY,
     student_id INT REFERENCES students(id) ON DELETE CASCADE,
-    youtube_link VARCHAR(255) NOT NULL,
-    transcript TEXT,
-    evaluation TEXT,
+    quiz_id INT REFERENCES quizzes(id) ON DELETE CASCADE,
+    video_url VARCHAR(255) NOT NULL,
+    analysis_data JSONB,
+    score INT,
+    status VARCHAR(50) DEFAULT 'pending',
+    processed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

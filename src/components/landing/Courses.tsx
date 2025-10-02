@@ -2,18 +2,18 @@ import { CloudArrowUpIcon, LockClosedIcon, ServerIcon } from '@heroicons/react/2
 
 const features = [
   {
-    name: 'Push to deploy.',
-    description: 'Lorem ipsum, dolor sit amet consectetur adipisicing elit aute id magna.',
+    name: 'Agentic AI Course.',
+    description: 'Advanced Prompt Engineering ',
     icon: CloudArrowUpIcon,
   },
   {
-    name: 'SSL certificates.',
-    description: 'Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo.',
+    name: 'Agentic AI Course..',
+    description: 'Autonomous AI Agents',
     icon: LockClosedIcon,
   },
   {
-    name: 'Database backups.',
-    description: 'Ac tincidunt sapien vehicula erat auctor pellentesque rhoncus.',
+    name: 'Generative AI Course.',
+    description: 'AI Content Creation',
     icon: ServerIcon,
   },
 ]
@@ -26,7 +26,7 @@ export default function Courses() {
           <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 sm:gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-2 lg:items-center lg:gap-y-0">
             <div className="lg:row-start-2 lg:max-w-md">
               <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-                Boost your productivity. Start using our app today.
+                Boost your Skills. Join our Bootcamp today.
               </h2>
               <p className="mt-6 text-lg/8 text-gray-300">
                 Ac euismod vel sit maecenas id pellentesque eu sed consectetur. Malesuada adipiscing sagittis vel nulla.

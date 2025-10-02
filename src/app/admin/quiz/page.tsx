@@ -1,4 +1,6 @@
+
 "use client"
+  import { supabase } from "@/lib/supabase-client";
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -15,10 +17,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { 
-  FileText, 
-  Clock, 
-  CheckCircle, 
+import {
+  FileText,
+  Clock,
+  CheckCircle,
   AlertCircle,
   Play,
   Eye,
@@ -47,11 +49,11 @@ const quizDetails = {
 // Question interface
 interface Question {
   id: number;
-  type: 'multiple_choice' | 'true_false';
-  question: string;
-  options?: string[];
-  correctAnswer: number | boolean;
-  difficulty: 'easy' | 'medium' | 'hard';
+  quiz_id: number;
+  question_text: string;
+  options: string[];
+  correct_answer: string;
+  created_at: string;
 }
 
 const getDifficultyBadge = (difficulty: string) => {
@@ -79,115 +81,71 @@ export default function QuizDetailsPage() {
   const [sendingEmails, setSendingEmails] = useState(false)
   const [quizConfig, setQuizConfig] = useState({
     title: "AI Generated Quiz",
-    description: "Generated using CrewAI agents",
     topics: "AI, Machine Learning, Neural Networks",
     difficulty: "MEDIUM",
     num_questions: 5,
     time_limit: 30
   })
 
-  const fetchQuizzes = async () => {
+
+const fetchQuizzes = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:8000/api/admin/quizzes', {
-        headers: {
-          'Authorization': 'Bearer dummy-token'
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setQuizzes(data)
-        if (data.length > 0) {
-          setSelectedQuiz(data[data.length - 1]) // Show latest quiz
-          fetchQuestions(data[data.length - 1].id)
-        }
+      const { data, error } = await supabase
+        .from("quizzes")
+        .select("*, questions(*)");
+
+      if (error) {
+        throw error;
       }
-    } catch (error) {
+
+      setQuizzes(data)
+      if (data.length > 0) {
+        setSelectedQuiz(data[data.length - 1]) // Show latest quiz
+        setQuestions(data[data.length - 1].questions || [])
+      }
+    } catch (error: any) {
       console.error('Failed to fetch quizzes:', error)
+      setGenerationError(error.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchQuestions = async (quizId: number) => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/admin/quizzes/${quizId}/questions`, {
-        headers: {
-          'Authorization': 'Bearer dummy-token'
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setQuestions(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch questions:', error)
-    }
-  }
+
 
   useEffect(() => {
     fetchQuizzes()
   }, [])
 
-  const handleActivateQuiz = async () => {
-    if (!selectedQuiz) return
-    
-    setActivating(true)
-    try {
-      const response = await fetch(`http://localhost:8000/api/admin/quizzes/${selectedQuiz.id}/activate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer dummy-token',
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        // Update the selected quiz status
-        setSelectedQuiz({
-          ...selectedQuiz,
-          is_active: data.is_active
-        })
-        // Also update in quizzes list
-        setQuizzes(quizzes.map(quiz => 
-          quiz.id === selectedQuiz.id 
-            ? { ...quiz, is_active: data.is_active }
-            : quiz
-        ))
-      }
-    } catch (error) {
-      console.error('Failed to activate quiz:', error)
-    } finally {
-      setActivating(false)
-    }
-  }
+  // Activation functionality disabled - database doesn't have is_active column
+  // const handleActivateQuiz = async () => { ... }
 
   const handleSendEmailInvitations = async () => {
-    if (!selectedQuiz || !selectedQuiz.is_active) {
-      alert('Quiz must be activated before sending invitations')
+    if (!selectedQuiz) {
+      alert('Please generate a quiz first before sending invitations')
       return
     }
 
     setSendingEmails(true)
     try {
-      const response = await fetch(`http://localhost:8000/api/admin/quizzes/${selectedQuiz.id}/send-invitations`, {
+      const response = await fetch('/api/quizzes/send-invitations', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer dummy-token',
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ quizId: selectedQuiz.id })
       })
 
       if (response.ok) {
         const data = await response.json()
-        alert(`Email invitations sent! 
-        📧 Sent: ${data.emails_sent}
-        ❌ Failed: ${data.emails_failed}
-        👥 Total Students: ${data.total_students}`)
+        alert(`Email invitations sent successfully! 
+📧 Sent: ${data.emails_sent}
+❌ Failed: ${data.emails_failed}
+👥 Total Students: ${data.total_students}`)
       } else {
         const error = await response.json()
-        alert(`Failed to send invitations: ${error.detail || 'Unknown error'}`)
+        alert(`Failed to send invitations: ${error.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Failed to send email invitations:', error)
@@ -203,24 +161,54 @@ export default function QuizDetailsPage() {
     setGenerationResult(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/admin/quizzes/generate', {
+      let quizId = selectedQuiz?.id;
+      
+      // If no quiz exists, create one first
+      if (!selectedQuiz) {
+        const { data: newQuiz, error: quizError } = await supabase
+          .from('quizzes')
+          .insert([{
+            name: quizConfig.title,
+            difficulty: quizConfig.difficulty.toLowerCase(),
+            topics: quizConfig.topics.split(',').map(t => t.trim()),
+            time_per_question: quizConfig.time_limit,
+            num_questions: quizConfig.num_questions,
+            type: 'multiple_choice'
+          }])
+          .select()
+          .single();
+
+        if (quizError) {
+          throw new Error(`Failed to create quiz: ${quizError.message}`);
+        }
+
+        quizId = newQuiz.id;
+        setSelectedQuiz(newQuiz);
+      }
+
+      const response = await fetch('/api/quizzes/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer dummy-token'
         },
         body: JSON.stringify({
-          ...quizConfig,
-          topics: quizConfig.topics.split(',').map(t => t.trim())
+          quizId: quizId,
+          numQuestions: quizConfig.num_questions,
+          difficulty: quizConfig.difficulty,
+          topics: quizConfig.topics.split(',').map(t => t.trim()),
+          timePerQuestion: quizConfig.time_limit,
+          type: "multiple-choice" // Assuming default type
         })
       })
 
       if (response.ok) {
         const result = await response.json()
         setGenerationResult(result)
+        // Refresh questions after generation
+        fetchQuizzes();
       } else {
-        const error = await response.text()
-        throw new Error(error)
+        const error = await response.json()
+        throw new Error(error.error || 'Generation failed')
       }
     } catch (error) {
       setGenerationError(error instanceof Error ? error.message : 'Generation failed')
@@ -243,27 +231,10 @@ export default function QuizDetailsPage() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Quiz
           </Button>
-          <Button 
-            onClick={handleActivateQuiz}
-            disabled={activating || !selectedQuiz}
-            variant={selectedQuiz?.is_active ? "secondary" : "default"}
-          >
-            {selectedQuiz?.is_active ? (
-              <>
-                <Square className="h-4 w-4 mr-2" />
-                {activating ? "Deactivating..." : "Deactivate Quiz"}
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                {activating ? "Activating..." : "Activate Quiz"}
-              </>
-            )}
-          </Button>
-          <Button 
+          <Button
             onClick={handleSendEmailInvitations}
-            disabled={sendingEmails || !selectedQuiz?.is_active}
-            variant="outline"
+            disabled={sendingEmails || !selectedQuiz}
+            variant="default"
           >
             {sendingEmails ? (
               <>
@@ -273,7 +244,7 @@ export default function QuizDetailsPage() {
             ) : (
               <>
                 <Mail className="h-4 w-4 mr-2" />
-                Send Email Invitations
+                Send Quiz Invitations
               </>
             )}
           </Button>
@@ -336,7 +307,7 @@ export default function QuizDetailsPage() {
             </div>
           </div>
 
-          <Button 
+          <Button
             onClick={handleGenerateQuiz}
             disabled={generating}
             className="w-full"
@@ -367,11 +338,11 @@ export default function QuizDetailsPage() {
               <CheckCircle className="h-4 w-4" />
               <AlertTitle>Quiz Generated Successfully!</AlertTitle>
               <AlertDescription>
-                Created quiz "{generationResult.quiz?.title}" with {generationResult.questions_generated} questions.
+                Created quiz "{generationResult.quiz?.name}" with {generationResult.questions_generated} questions.
                 Quiz ID: {generationResult.quiz_id}
                 <br />
-                <Button 
-                  className="mt-2" 
+                <Button
+                  className="mt-2"
                   size="sm"
                   onClick={() => window.location.href = `/admin/quiz/${generationResult.quiz_id}`}
                 >
@@ -390,25 +361,16 @@ export default function QuizDetailsPage() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                {selectedQuiz ? selectedQuiz.title : "No Quiz Selected"}
+                {selectedQuiz ? selectedQuiz.name : "No Quiz Selected"}
               </CardTitle>
               <CardDescription>
-                {selectedQuiz ? selectedQuiz.description : "Generate a quiz to see details"}
+                Generate a quiz to see details
               </CardDescription>
             </div>
             {selectedQuiz && (
-              <Badge variant={selectedQuiz.is_active ? 'default' : 'secondary'}>
-                {selectedQuiz.is_active ? (
-                  <>
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Active
-                  </>
-                ) : (
-                  <>
-                    <Clock className="h-3 w-3 mr-1" />
-                    Draft
-                  </>
-                )}
+              <Badge variant="secondary">
+                <Clock className="h-3 w-3 mr-1" />
+                Draft
               </Badge>
             )}
           </div>
@@ -432,7 +394,7 @@ export default function QuizDetailsPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <div className="text-sm font-medium text-muted-foreground">Participation</div>
               <div className="space-y-1">
@@ -484,12 +446,11 @@ export default function QuizDetailsPage() {
               <div key={question.id} className="border rounded-lg p-4 space-y-2">
                 <div className="space-y-1">
                   <h3 className="text-lg font-semibold">Q{index + 1}</h3>
-                  <p className="text-sm text-muted-foreground capitalize">{question.type.replace('_', ' ')}</p>
-                  <p className="text-sm font-medium capitalize">{question.difficulty}</p>
-                  <h4 className="font-medium text-base mt-2">{question.question}</h4>
+                  <p className="text-sm text-muted-foreground capitalize">Multiple Choice</p>
+                  <h4 className="font-medium text-base mt-2">{question.question_text}</h4>
                 </div>
-                
-                {question.type === 'multiple_choice' && question.options && (
+
+{question.options && (
                   <div className="mt-3 space-y-1">
                     {question.options.map((option: string, optIndex: number) => (
                       <div key={optIndex} className="flex items-center space-x-2">
@@ -497,42 +458,15 @@ export default function QuizDetailsPage() {
                           {String.fromCharCode(65 + optIndex)}.
                         </span>
                         <span className={`text-sm ${
-                          optIndex === question.correctAnswer ? 'font-medium text-green-700' : ''
+                          optIndex === parseInt(question.correct_answer) ? 'font-medium text-green-700' : ''
                         }`}>
                           {option}
                         </span>
-                        {optIndex === question.correctAnswer && (
+                        {optIndex === parseInt(question.correct_answer) && (
                           <CheckCircle className="h-4 w-4 text-green-600" />
                         )}
                       </div>
                     ))}
-                  </div>
-                )}
-
-                {question.type === 'true_false' && (
-                  <div className="mt-3 space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-sm">A.</span>
-                      <span className={`text-sm ${
-                        question.correctAnswer === true ? 'font-medium text-green-700' : ''
-                      }`}>
-                        True
-                      </span>
-                      {question.correctAnswer === true && (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-medium text-sm">B.</span>
-                      <span className={`text-sm ${
-                        question.correctAnswer === false ? 'font-medium text-green-700' : ''
-                      }`}>
-                        False
-                      </span>
-                      {question.correctAnswer === false && (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      )}
-                    </div>
                   </div>
                 )}
               </div>

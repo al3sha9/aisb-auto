@@ -1,19 +1,25 @@
 
-import { AgentExecutor, createReactAgent } from "langchain/agents";
-import { llm } from "../lib/groq-client";
 import { quizGeneratorTool } from "../tools/quiz-generator";
-import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
 
-const tools = [quizGeneratorTool, new TavilySearchResults({ maxResults: 1 })];
+// Simplified quiz generator that directly uses the tool
+export const quizGeneratorAgent = {
+  async invoke({ input }: { input: string }) {
+    // Parse the input to extract parameters
+    const numQuestions = parseInt(input.match(/(\d+) questions/)?.[1] || "5");
+    const difficulty = input.match(/Difficulty: (\w+)/)?.[1] || "MEDIUM";
+    const topicsMatch = input.match(/Topics: ([^,\n]+)/)?.[1];
+    const topics = topicsMatch ? topicsMatch.split(',').map(t => t.trim()) : ["General"];
+    const timePerQuestion = parseInt(input.match(/Time per question: (\d+)/)?.[1] || "60");
+    const type = input.match(/Type: ([^\n]+)/)?.[1] || "multiple-choice";
 
-const agent = await createReactAgent({
-  llm,
-  tools,
-  prompt: "" // You can add a prompt here if needed
-});
+    const result = await quizGeneratorTool.invoke({
+      numQuestions,
+      difficulty,
+      topics,
+      timePerQuestion,
+      type
+    });
 
-export const quizGeneratorAgent = new AgentExecutor({
-  agent,
-  tools,
-  verbose: true,
-});
+    return { output: result };
+  }
+};
