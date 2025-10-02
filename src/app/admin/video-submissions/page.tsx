@@ -6,8 +6,21 @@ import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 
+interface Student {
+  name: string;
+  email: string;
+}
+
+interface VideoSubmission {
+  id: string;
+  youtube_link: string;
+  transcript: string;
+  evaluation: string;
+  students: Student;
+}
+
 export default function VideoSubmissionsPage() {
-  const [submissions, setSubmissions] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<VideoSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [ranking, setRanking] = useState(false);
 
@@ -24,7 +37,7 @@ export default function VideoSubmissionsPage() {
 
         setSubmissions(data);
       } catch (error) {
-        toast.error(`Failed to fetch video submissions: ${error.message}`);
+        toast.error(`Failed to fetch video submissions: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
@@ -49,7 +62,7 @@ export default function VideoSubmissionsPage() {
 
       toast.success("Final ranking and notification complete!", { id: toastId });
     } catch (error) {
-      toast.error(`Failed to rank and notify: ${error.message}`, { id: toastId });
+      toast.error(`Failed to rank and notify: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId });
     } finally {
       setRanking(false);
     }

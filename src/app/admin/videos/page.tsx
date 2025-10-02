@@ -211,7 +211,7 @@ export default function VideoSubmissionsPage() {
       if (originalSubmission?.evaluation) {
         try {
           evaluationData = JSON.parse(originalSubmission.evaluation)
-        } catch (error) {
+        } catch {
           evaluationData = { summary: originalSubmission.evaluation }
         }
       }

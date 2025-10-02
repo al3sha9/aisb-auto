@@ -1,9 +1,9 @@
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
 import { emailTool } from "@/tools/email-tool";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const { data: submissions, error: submissionsError } = await supabase
       .from("video_submissions")
@@ -33,6 +33,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'An error occurred' }, { status: 500 });
   }
 }

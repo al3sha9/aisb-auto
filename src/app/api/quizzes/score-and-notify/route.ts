@@ -1,9 +1,9 @@
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase-client";
 import { emailTool } from "@/tools/email-tool";
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const { data: answers, error: answersError } = await supabase
       .from("answers")
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       return acc;
     }, {});
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sortedStudents = Object.values(scores).sort((a: any, b: any) => b.score - a.score);
 
     const top5 = sortedStudents.slice(0, 5);
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
     for (const student of top5) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const studentData = student as any; // Type assertion for now
       // Create unique video submission link for each student
       const videoSubmissionLink = `${baseUrl}/student/submit-video?student=${studentData.student_id}`;
@@ -88,6 +90,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'An error occurred' }, { status: 500 });
   }
 }

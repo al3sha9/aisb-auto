@@ -6,8 +6,21 @@ import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 
+interface ResultAnswer {
+  id: number;
+  // Add other answer properties as needed
+}
+
+interface Result {
+  quizName: string;
+  studentName: string;
+  studentEmail: string;
+  score: number;
+  answers: ResultAnswer[];
+}
+
 export default function ResultsPage() {
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
   const [loading, setLoading] = useState(true);
   const [scoring, setScoring] = useState(false);
 
@@ -43,7 +56,7 @@ export default function ResultsPage() {
 
         setResults(Object.values(groupedResults));
       } catch (error) {
-        toast.error(`Failed to fetch results: ${error.message}`);
+        toast.error(`Failed to fetch results: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
@@ -68,7 +81,7 @@ export default function ResultsPage() {
 
       toast.success("Scoring and notification complete!", { id: toastId });
     } catch (error) {
-      toast.error(`Failed to score and notify: ${error.message}`, { id: toastId });
+      toast.error(`Failed to score and notify: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId });
     } finally {
       setScoring(false);
     }

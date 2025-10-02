@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface QuizResult {
-  id: number
+  id: string
   student: {
     name: string
     email: string
@@ -47,9 +47,7 @@ export default function QuizResultsPage() {
   const [error, setError] = useState<string | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
-  const [selectedStudents, setSelectedStudents] = useState<QuizResult[]>([])
   const [emailsSent, setEmailsSent] = useState(false)
-
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -73,13 +71,15 @@ export default function QuizResultsPage() {
         }
 
         // Create a map of quiz_id to quiz info for easy lookup
-        const quizMap = quizzesData.reduce((acc: any, quiz: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const quizMap = quizzesData.reduce((acc: Record<string, any>, quiz: any) => {
           acc[quiz.id] = quiz;
           return acc;
         }, {});
 
         // Group answers by student and quiz
-        const studentQuizResults = answersData.reduce((acc: any, answer: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const studentQuizResults = answersData.reduce((acc: Record<string, any>, answer: any) => {
           const quizId = answer.questions.quiz_id;
           const key = `${answer.student_id}-${quizId}`;
           
@@ -111,7 +111,8 @@ export default function QuizResultsPage() {
         }, {});
 
         // Format results for display
-        const formattedResults = Object.values(studentQuizResults).map((result: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const formattedResults = Object.values(studentQuizResults).map((result: Record<string, any>) => {
           const quiz = quizMap[result.quiz_id];
           const totalQuestions = quiz ? quiz.num_questions : result.totalAnswered;
           const score = result.correctAnswers;
@@ -135,8 +136,8 @@ export default function QuizResultsPage() {
         });
 
         setResults(formattedResults);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
@@ -188,8 +189,8 @@ export default function QuizResultsPage() {
       setSuccess(`Successfully initiated scoring and notification process. Top students will receive email invitations.`)
       setEmailsSent(true)
 
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setSelecting(false)
     }
@@ -277,33 +278,7 @@ export default function QuizResultsPage() {
         </Alert>
       )}
 
-      {/* Selected Students Display */}
-      {selectedStudents.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              Selected Top Students ({selectedStudents.length})
-            </CardTitle>
-            <CardDescription>
-              These students have been invited to submit video applications
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {selectedStudents.map((student) => (
-                <div key={student.id} className="border rounded-lg p-3">
-                  <div className="font-medium">{student.student?.name}</div>
-                  <div className="text-sm text-muted-foreground">{student.student?.email}</div>
-                  <div className="text-sm font-medium text-green-600">
-                    Score: {student.score}/{student.total_questions} ({student.percentage.toFixed(1)}%)
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Selected Students functionality removed */}
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

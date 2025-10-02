@@ -8,13 +8,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Progress } from "@/components/ui/progress"
-import { Users, Brain, Mail, FileText, BarChart3, Clock, CheckCircle, XCircle, LogOut, Shield, Trash2 } from 'lucide-react'
+import { Users, Brain, Mail, FileText, LogOut, Shield, Trash2 } from 'lucide-react'
 // import { EmailSuccessModal } from '@/components/EmailSuccessModal'
 
 interface Student {
@@ -39,21 +35,14 @@ interface Question {
   correct_answer: string
 }
 
-interface QuizResult {
-  id: number
-  student: {
-    name: string
-    email: string
-  }
-  quiz: {
-    title: string
-  }
-  score: number
-  total_questions: number
-  percentage: number
-  completed_at: string
-  time_taken_minutes: number | null
-}
+// interface QuizResult {
+//   id: string
+//   quizName: string
+//   studentName: string
+//   score: number
+//   completedAt: string
+//   timeSpent: number
+// }
 
 interface AdminUser {
   id: number
@@ -118,8 +107,8 @@ export default function AdminDashboard() {
       if (quizzesError) throw quizzesError;
       setQuizzes(quizzes);
 
-    } catch (err: any) {
-      toast.error(`Failed to fetch data: ${err.message}`);
+    } catch (err) {
+      toast.error(`Failed to fetch data: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -149,7 +138,7 @@ export default function AdminDashboard() {
 
       toast.success("Invitations sent successfully!", { id: toastId });
     } catch (error) {
-      toast.error(`Failed to send invitations: ${error.message}`, { id: toastId });
+      toast.error(`Failed to send invitations: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId });
     } finally {
       setSending(false);
     }
@@ -172,7 +161,7 @@ export default function AdminDashboard() {
       toast.success(`Quiz "${quizTitle}" deleted successfully`, { id: toastId });
       setQuizzes(quizzes.filter(q => q.id !== quizId));
     } catch (err) {
-      toast.error(`Failed to delete quiz: ${err.message}`, { id: toastId });
+      toast.error(`Failed to delete quiz: ${err instanceof Error ? err.message : 'Unknown error'}`, { id: toastId });
     }
   };
 

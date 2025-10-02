@@ -25,17 +25,15 @@ interface Student {
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const fetchStudents = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from("students").select("*");
-    if (error) {
-      toast.error(`Failed to fetch students: ${error.message}`);
-    } else {
-      setStudents(data);
+    try {
+      const { data, error } = await supabase.from("students").select("*");
+      if (error) throw error;
+      setStudents(data || []);
+    } catch (error) {
+      console.error("Error fetching students:", error);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -58,8 +56,8 @@ export default function StudentsPage() {
 
       toast.success(`Student "${studentName}" deleted successfully`, { id: toastId });
       fetchStudents(); // Refresh the student list
-    } catch (err: any) {
-      toast.error(`Failed to delete student: ${err.message}`, { id: toastId });
+    } catch (err: unknown) {
+      toast.error(`Failed to delete student: ${err instanceof Error ? err.message : 'Unknown error'}`, { id: toastId });
     }
   };
 

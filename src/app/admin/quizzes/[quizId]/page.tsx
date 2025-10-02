@@ -7,9 +7,27 @@ import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 
+interface Question {
+  id: number;
+  question_text: string;
+  options: string[];
+  correct_answer: string;
+}
+
+interface Quiz {
+  id: number;
+  name: string;
+  difficulty: string;
+  topics: string[];
+  num_questions: number;
+  time_per_question: number;
+  type: string;
+  questions: Question[];
+}
+
 export default function QuizDetailsPage() {
   const params = useParams();
-  const [quiz, setQuiz] = useState<any>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
@@ -28,7 +46,7 @@ export default function QuizDetailsPage() {
 
         setQuiz(data);
       } catch (error) {
-        toast.error(`Failed to fetch quiz: ${error.message}`);
+        toast.error(`Failed to fetch quiz: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
@@ -78,7 +96,7 @@ export default function QuizDetailsPage() {
 
       setQuiz(data);
     } catch (error) {
-      toast.error(`Failed to generate questions: ${error.message}`, { id: toastId });
+      toast.error(`Failed to generate questions: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId });
     } finally {
       setGenerating(false);
     }
@@ -107,7 +125,7 @@ export default function QuizDetailsPage() {
         <h2 className="text-2xl font-bold mb-4">Questions</h2>
         {quiz.questions.length > 0 ? (
           <ul className="space-y-4">
-            {quiz.questions.map((q: any) => (
+            {quiz.questions.map((q: Question) => (
               <li key={q.id} className="border p-4 rounded">
                 <p className="font-bold">{q.question_text}</p>
                 <ul className="list-disc pl-5 mt-2">

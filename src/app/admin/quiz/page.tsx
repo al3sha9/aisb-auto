@@ -10,25 +10,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   FileText,
   Clock,
   CheckCircle,
   AlertCircle,
-  Play,
-  Eye,
   Edit,
-  Sparkles,
   Loader2,
-  Bot,
-  Square,
   Mail
 } from "lucide-react"
 
@@ -46,39 +33,20 @@ const quizDetails = {
   averageScore: 78.5
 }
 
-// Question interface
-interface Question {
-  id: number;
-  quiz_id: number;
-  question_text: string;
-  options: string[];
-  correct_answer: string;
-  created_at: string;
-}
+// Unused interfaces and functions removed
 
-const getDifficultyBadge = (difficulty: string) => {
-  switch (difficulty) {
-    case 'easy':
-      return <Badge variant="secondary" className="bg-green-100 text-green-800">Easy</Badge>
-    case 'medium':
-      return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Medium</Badge>
-    case 'hard':
-      return <Badge variant="secondary" className="bg-red-100 text-red-800">Hard</Badge>
-    default:
-      return <Badge variant="secondary">{difficulty}</Badge>
-  }
+interface GenerationResult {
+  quiz?: {
+    name: string;
+  };
+  questions_generated?: number;
+  quiz_id?: number;
 }
 
 export default function QuizDetailsPage() {
   const [generating, setGenerating] = useState(false)
-  const [generationResult, setGenerationResult] = useState<any>(null)
+  const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
-  const [quizzes, setQuizzes] = useState<any[]>([])
-  const [selectedQuiz, setSelectedQuiz] = useState<any>(null)
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [loading, setLoading] = useState(false)
-  const [activating, setActivating] = useState(false)
-  const [sendingEmails, setSendingEmails] = useState(false)
   const [quizConfig, setQuizConfig] = useState({
     title: "AI Generated Quiz",
     topics: "AI, Machine Learning, Neural Networks",
@@ -88,72 +56,14 @@ export default function QuizDetailsPage() {
   })
 
 
-const fetchQuizzes = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from("quizzes")
-        .select("*, questions(*)");
-
-      if (error) {
-        throw error;
-      }
-
-      setQuizzes(data)
-      if (data.length > 0) {
-        setSelectedQuiz(data[data.length - 1]) // Show latest quiz
-        setQuestions(data[data.length - 1].questions || [])
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch quizzes:', error)
-      setGenerationError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-
-
   useEffect(() => {
-    fetchQuizzes()
+    // Quiz generation page - no need to fetch existing quizzes
   }, [])
 
   // Activation functionality disabled - database doesn't have is_active column
   // const handleActivateQuiz = async () => { ... }
 
-  const handleSendEmailInvitations = async () => {
-    if (!selectedQuiz) {
-      alert('Please generate a quiz first before sending invitations')
-      return
-    }
-
-    setSendingEmails(true)
-    try {
-      const response = await fetch('/api/quizzes/send-invitations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ quizId: selectedQuiz.id })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        alert(`Email invitations sent successfully! 
-📧 Sent: ${data.emails_sent}
-❌ Failed: ${data.emails_failed}
-👥 Total Students: ${data.total_students}`)
-      } else {
-        const error = await response.json()
-        alert(`Failed to send invitations: ${error.error || 'Unknown error'}`)
-      }
-    } catch (error) {
-      console.error('Failed to send email invitations:', error)
-      alert('Failed to send email invitations. Please try again.')
-    } finally {
-      setSendingEmails(false)
-    }
-  }
+  // Email functionality removed for this page
 
   const handleGenerateQuiz = async () => {
     setGenerating(true)
@@ -161,29 +71,22 @@ const fetchQuizzes = async () => {
     setGenerationResult(null)
 
     try {
-      let quizId = selectedQuiz?.id;
-      
-      // If no quiz exists, create one first
-      if (!selectedQuiz) {
-        const { data: newQuiz, error: quizError } = await supabase
-          .from('quizzes')
-          .insert([{
-            name: quizConfig.title,
-            difficulty: quizConfig.difficulty.toLowerCase(),
-            topics: quizConfig.topics.split(',').map(t => t.trim()),
-            time_per_question: quizConfig.time_limit,
-            num_questions: quizConfig.num_questions,
-            type: 'multiple_choice'
-          }])
-          .select()
-          .single();
+      // Create quiz first
+      const { data: newQuiz, error: quizError } = await supabase
+        .from('quizzes')
+        .insert([{
+          name: quizConfig.title,
+          difficulty: quizConfig.difficulty.toLowerCase(),
+          topics: quizConfig.topics.split(',').map(t => t.trim()),
+          time_per_question: quizConfig.time_limit,
+          num_questions: quizConfig.num_questions,
+          type: 'multiple_choice'
+        }])
+        .select()
+        .single();
 
-        if (quizError) {
-          throw new Error(`Failed to create quiz: ${quizError.message}`);
-        }
-
-        quizId = newQuiz.id;
-        setSelectedQuiz(newQuiz);
+      if (quizError) {
+        throw new Error(`Failed to create quiz: ${quizError.message}`);
       }
 
       const response = await fetch('/api/quizzes/generate', {
@@ -192,20 +95,21 @@ const fetchQuizzes = async () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          quizId: quizId,
+          quizId: newQuiz.id,
           numQuestions: quizConfig.num_questions,
           difficulty: quizConfig.difficulty,
           topics: quizConfig.topics.split(',').map(t => t.trim()),
           timePerQuestion: quizConfig.time_limit,
-          type: "multiple-choice" // Assuming default type
+          type: "multiple-choice"
         })
       })
 
       if (response.ok) {
         const result = await response.json()
-        setGenerationResult(result)
-        // Refresh questions after generation
-        fetchQuizzes();
+        setGenerationResult({
+          ...result,
+          quiz_id: newQuiz.id
+        })
       } else {
         const error = await response.json()
         throw new Error(error.error || 'Generation failed')
@@ -232,21 +136,11 @@ const fetchQuizzes = async () => {
             Edit Quiz
           </Button>
           <Button
-            onClick={handleSendEmailInvitations}
-            disabled={sendingEmails || !selectedQuiz}
+            onClick={() => window.location.href = '/admin/quizzes'}
             variant="default"
           >
-            {sendingEmails ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Sending Emails...
-              </>
-            ) : (
-              <>
-                <Mail className="h-4 w-4 mr-2" />
-                Send Quiz Invitations
-              </>
-            )}
+            <Mail className="h-4 w-4 mr-2" />
+            View All Quizzes
           </Button>
         </div>
       </div>
@@ -338,7 +232,7 @@ const fetchQuizzes = async () => {
               <CheckCircle className="h-4 w-4" />
               <AlertTitle>Quiz Generated Successfully!</AlertTitle>
               <AlertDescription>
-                Created quiz "{generationResult.quiz?.name}" with {generationResult.questions_generated} questions.
+                Created quiz &quot;{generationResult.quiz?.name}&quot; with {generationResult.questions_generated} questions.
                 Quiz ID: {generationResult.quiz_id}
                 <br />
                 <Button
@@ -361,13 +255,13 @@ const fetchQuizzes = async () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                {selectedQuiz ? selectedQuiz.name : "No Quiz Selected"}
+                Generate Quiz
               </CardTitle>
               <CardDescription>
                 Generate a quiz to see details
               </CardDescription>
             </div>
-            {selectedQuiz && (
+            {false && (
               <Badge variant="secondary">
                 <Clock className="h-3 w-3 mr-1" />
                 Draft
@@ -442,35 +336,7 @@ const fetchQuizzes = async () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {questions.map((question, index) => (
-              <div key={question.id} className="border rounded-lg p-4 space-y-2">
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold">Q{index + 1}</h3>
-                  <p className="text-sm text-muted-foreground capitalize">Multiple Choice</p>
-                  <h4 className="font-medium text-base mt-2">{question.question_text}</h4>
-                </div>
-
-{question.options && (
-                  <div className="mt-3 space-y-1">
-                    {question.options.map((option: string, optIndex: number) => (
-                      <div key={optIndex} className="flex items-center space-x-2">
-                        <span className="font-medium text-sm">
-                          {String.fromCharCode(65 + optIndex)}.
-                        </span>
-                        <span className={`text-sm ${
-                          optIndex === parseInt(question.correct_answer) ? 'font-medium text-green-700' : ''
-                        }`}>
-                          {option}
-                        </span>
-                        {optIndex === parseInt(question.correct_answer) && (
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
+            <p className="text-muted-foreground">Generate a quiz to see questions here.</p>
           </div>
         </CardContent>
       </Card>
