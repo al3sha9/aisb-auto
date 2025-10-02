@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import toast from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -19,21 +20,7 @@ import {
   Mail
 } from "lucide-react"
 
-// Mock quiz data
-const quizDetails = {
-  id: "QUIZ001",
-  title: "AI Fundamentals Assessment",
-  description: "Comprehensive quiz covering basic AI concepts and applications",
-  status: "active",
-  createdAt: "2025-09-25",
-  totalQuestions: 15,
-  timeLimit: 30, // minutes
-  studentsInvited: 25,
-  studentsCompleted: 12,
-  averageScore: 78.5
-}
-
-// Unused interfaces and functions removed
+// Interfaces for quiz and questions
 
 interface GenerationResult {
   quiz?: {
@@ -43,10 +30,31 @@ interface GenerationResult {
   quiz_id?: number;
 }
 
+interface Question {
+  id: number;
+  question_text: string;
+  options: string[];
+  correct_answer: string;
+}
+
+interface Quiz {
+  id: number;
+  name: string;
+  difficulty: string;
+  topics: string[];
+  num_questions: number;
+  time_per_question: number;
+  is_active?: boolean;
+}
+
 export default function QuizDetailsPage() {
   const [generating, setGenerating] = useState(false)
   const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [currentQuiz, setCurrentQuiz] = useState<Quiz | null>(null)
+  const [sending, setSending] = useState(false)
+  // const [activating, setActivating] = useState(false) // Disabled until DB column is added
   const [quizConfig, setQuizConfig] = useState({
     title: "AI Generated Quiz",
     topics: "AI, Machine Learning, Neural Networks",
@@ -55,15 +63,133 @@ export default function QuizDetailsPage() {
     time_limit: 30
   })
 
+  const fetchQuestions = async (quizId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .order('id');
+      
+      if (error) throw error;
+      setQuestions(data || []);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+    }
+  }
+
+  // const fetchQuiz = async (quizId: number) => {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from('quizzes')
+  //       .select('*')
+  //       .eq('id', quizId)
+  //       .single();
+  //     
+  //     if (error) throw error;
+  //     setCurrentQuiz(data);
+  //     await fetchQuestions(quizId);
+  //   } catch (error) {
+  //     console.error('Error fetching quiz:', error);
+  //   }
+  // }
 
   useEffect(() => {
-    // Quiz generation page - no need to fetch existing quizzes
+    // Quiz generation page - fetch latest quiz if available
+    const fetchLatestQuiz = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('quizzes')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (!error && data) {
+          setCurrentQuiz(data);
+          await fetchQuestions(data.id);
+        }
+      } catch {
+        // No quizzes exist yet, that's fine
+        console.log('No existing quizzes found');
+      }
+    }
+    
+    fetchLatestQuiz();
   }, [])
 
-  // Activation functionality disabled - database doesn't have is_active column
-  // const handleActivateQuiz = async () => { ... }
+  const handleActivateQuiz = async () => {
+    if (!currentQuiz) return;
+    
+    // For now, just toggle the local state since is_active column doesn't exist in DB
+    setCurrentQuiz({
+      ...currentQuiz,
+      is_active: !currentQuiz.is_active
+    });
+    
+    // TODO: Uncomment when is_active column is added to database
+    /*
+    setActivating(true);
+    try {
+      const response = await fetch('/api/quizzes/activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quizId: currentQuiz.id,
+          isActive: !currentQuiz.is_active
+        })
+      });
 
-  // Email functionality removed for this page
+      if (response.ok) {
+        setCurrentQuiz({
+          ...currentQuiz,
+          is_active: !currentQuiz.is_active
+        });
+      } else {
+        throw new Error('Failed to activate quiz');
+      }
+    } catch (error) {
+      console.error('Error activating quiz:', error);
+    } finally {
+      setActivating(false);
+    }
+    */
+  }
+
+  const handleSendInvitations = async () => {
+    if (!currentQuiz) return;
+    
+    setSending(true);
+    try {
+      const response = await fetch('/api/quizzes/send-invitations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quizId: currentQuiz.id
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`Quiz invitations sent successfully!
+Emails sent: ${result.emails_sent}
+Failed: ${result.emails_failed}
+Total students: ${result.total_students}`);
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to send invitations');
+      }
+    } catch (error) {
+      console.error('Error sending invitations:', error);
+      toast.error(`Failed to send invitations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setSending(false);
+    }
+  }
 
   const handleGenerateQuiz = async () => {
     setGenerating(true)
@@ -105,11 +231,14 @@ export default function QuizDetailsPage() {
       })
 
       if (response.ok) {
-        const result = await response.json()
         setGenerationResult({
-          ...result,
+          quiz: { name: newQuiz.name },
+          questions_generated: quizConfig.num_questions,
           quiz_id: newQuiz.id
         })
+        // Fetch the newly created quiz and its questions
+        setCurrentQuiz(newQuiz);
+        await fetchQuestions(newQuiz.id);
       } else {
         const error = await response.json()
         throw new Error(error.error || 'Generation failed')
@@ -135,11 +264,29 @@ export default function QuizDetailsPage() {
             <Edit className="h-4 w-4 mr-2" />
             Edit Quiz
           </Button>
+          {currentQuiz && questions.length > 0 && (
+            <Button
+              onClick={handleSendInvitations}
+              disabled={sending}
+              variant="default"
+            >
+              {sending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Quiz Invitations
+                </>
+              )}
+            </Button>
+          )}
           <Button
             onClick={() => window.location.href = '/admin/quizzes'}
-            variant="default"
+            variant="outline"
           >
-            <Mail className="h-4 w-4 mr-2" />
             View All Quizzes
           </Button>
         </div>
@@ -249,94 +396,138 @@ export default function QuizDetailsPage() {
       </Card>
 
       {/* Quiz Overview */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Generate Quiz
-              </CardTitle>
-              <CardDescription>
-                Generate a quiz to see details
-              </CardDescription>
-            </div>
-            {false && (
-              <Badge variant="secondary">
+      {currentQuiz && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  {currentQuiz.name}
+                </CardTitle>
+                <CardDescription>
+                  Quiz details and performance metrics
+                </CardDescription>
+              </div>
+              <Badge variant={currentQuiz.is_active ? "default" : "secondary"}>
                 <Clock className="h-3 w-3 mr-1" />
-                Draft
+                {currentQuiz.is_active ? "Active" : "Draft"}
               </Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">Quiz Info</div>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-sm">Questions:</span>
-                  <span className="text-sm font-medium">{quizDetails.totalQuestions}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Time Limit:</span>
-                  <span className="text-sm font-medium">{quizDetails.timeLimit} minutes</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Created:</span>
-                  <span className="text-sm font-medium">{quizDetails.createdAt}</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Quiz Info</div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Questions:</span>
+                    <span className="text-sm font-medium">{questions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Time per Question:</span>
+                    <span className="text-sm font-medium">{currentQuiz.time_per_question}s</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Difficulty:</span>
+                    <span className="text-sm font-medium capitalize">{currentQuiz.difficulty}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Topics:</span>
+                    <span className="text-sm font-medium">{currentQuiz.topics.join(', ')}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">Participation</div>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-sm">Invited:</span>
-                  <span className="text-sm font-medium">{quizDetails.studentsInvited} students</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Completed:</span>
-                  <span className="text-sm font-medium">{quizDetails.studentsCompleted} students</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Completion Rate:</span>
-                  <span className="text-sm font-medium">
-                    {Math.round((quizDetails.studentsCompleted / quizDetails.studentsInvited) * 100)}%
-                  </span>
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Participation</div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Status:</span>
+                    <span className="text-sm font-medium">{currentQuiz.is_active ? 'Active' : 'Draft'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Questions Generated:</span>
+                    <span className="text-sm font-medium">{questions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Ready to Launch:</span>
+                    <span className="text-sm font-medium">{questions.length > 0 ? 'Yes' : 'No'}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-muted-foreground">Performance</div>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-sm">Average Score:</span>
-                  <span className="text-sm font-medium">{quizDetails.averageScore}%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Pass Rate:</span>
-                  <span className="text-sm font-medium">85%</span>
+              <div className="space-y-2">
+                <div className="text-sm font-medium text-muted-foreground">Configuration</div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Quiz ID:</span>
+                    <span className="text-sm font-medium">{currentQuiz.id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm">Type:</span>
+                    <span className="text-sm font-medium">Multiple Choice</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Questions List */}
       <Card>
         <CardHeader>
-          <CardTitle>Questions</CardTitle>
-          <CardDescription>
-            Review all questions in this quiz
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Questions</CardTitle>
+              <CardDescription>
+                Review all questions in this quiz
+              </CardDescription>
+            </div>
+            {currentQuiz && questions.length > 0 && (
+              <Button
+                onClick={handleActivateQuiz}
+                variant={currentQuiz.is_active ? "destructive" : "default"}
+              >
+                {currentQuiz.is_active ? "Deactivate Quiz" : "Activate Quiz"}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <p className="text-muted-foreground">Generate a quiz to see questions here.</p>
+            {questions.length > 0 ? (
+              questions.map((question, index) => (
+                <div key={question.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <h4 className="font-medium">Question {index + 1}</h4>
+                    <Badge variant="outline">{currentQuiz?.difficulty || 'Medium'}</Badge>
+                  </div>
+                  <p className="text-sm mb-3">{question.question_text}</p>
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium text-muted-foreground mb-1">Options:</div>
+                    {question.options.map((option, optionIndex) => (
+                      <div
+                        key={optionIndex}
+                        className={`text-sm p-2 rounded border ${
+                          question.correct_answer === optionIndex.toString() 
+                            ? 'bg-green-50 border-green-200 text-green-800' 
+                            : 'bg-gray-50'
+                        }`}
+                      >
+                        {String.fromCharCode(65 + optionIndex)}. {option}
+                        {question.correct_answer === optionIndex.toString() && (
+                          <CheckCircle className="h-4 w-4 inline-block ml-2 text-green-600" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground">Generate a quiz to see questions here.</p>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -37,45 +37,96 @@ export async function POST(req: NextRequest) {
         // Generate unique quiz link for each student
         const quizLink = `${baseUrl}/student/quiz/${quizId}?student=${student.id}`;
         
-        // Create personalized email content
+        // Create personalized email content with professional design
         const emailBody = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #333; text-align: center;">🎯 Quiz Invitation</h2>
-            
-            <p>Hello <strong>${student.name}</strong>,</p>
-            
-            <p>Great news! Your form has been selected, and you have been invited to take the quiz: <strong>"${quiz.name}"</strong></p>
-            
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #495057; margin-top: 0;">⏰ Important Quiz Information:</h3>
-              <ul style="color: #6c757d;">
-                <li>You have <strong>${quiz.time_per_question} seconds</strong> to answer each question</li>
-                <li>The quiz will automatically move to the next question when time runs out</li>
-                <li>Make sure you have a stable internet connection</li>
-                <li>Answer as quickly and accurately as possible</li>
-              </ul>
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Quiz Invitation</title>
+          </head>
+          <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+              
+              <!-- Header -->
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
+                  AI Skill Bridge
+                </h1>
+                <p style="color: #e6e9ff; margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">
+                  Assessment Platform
+                </p>
+              </div>
+              
+              <!-- Content -->
+              <div style="padding: 40px 30px;">
+                <h2 style="color: #1a202c; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+                  Quiz Invitation
+                </h2>
+                
+                <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">
+                  Hello <strong style="color: #2d3748;">${student.name}</strong>,
+                </p>
+                
+                <p style="color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+                  You have been selected to participate in our assessment quiz: <strong style="color: #2d3748;">"${quiz.name}"</strong>. 
+                  Please review the instructions below and begin when ready.
+                </p>
+                
+                <!-- Instructions Card -->
+                <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 24px 0;">
+                  <h3 style="color: #2d3748; margin: 0 0 16px 0; font-size: 18px; font-weight: 600;">
+                    Assessment Guidelines
+                  </h3>
+                  <ul style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;">Each question has a 10-second time limit</li>
+                    <li style="margin-bottom: 8px;">Questions advance automatically when time expires</li>
+                    <li style="margin-bottom: 8px;">Ensure stable internet connection before starting</li>
+                    <li style="margin-bottom: 8px;">Answer accuracy and speed are both evaluated</li>
+                    <li style="margin-bottom: 0;">Once started, the assessment cannot be paused</li>
+                  </ul>
+                </div>
+                
+                <!-- CTA Button -->
+                <div style="text-align: center; margin: 32px 0;">
+                  <a href="${quizLink}" 
+                     style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                            color: #ffffff; 
+                            text-decoration: none; 
+                            padding: 16px 32px; 
+                            border-radius: 8px; 
+                            font-weight: 600; 
+                            font-size: 16px; 
+                            display: inline-block; 
+                            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                            transition: transform 0.2s ease;">
+                    Begin Assessment
+                  </a>
+                </div>
+                
+                <div style="background-color: #edf2f7; border-radius: 8px; padding: 16px; margin-top: 24px;">
+                  <p style="color: #4a5568; font-size: 14px; margin: 0; text-align: center;">
+                    <strong>Important:</strong> This quiz link is personalized for you. Do not share it with others.
+                  </p>
+                </div>
+              </div>
+              
+              <!-- Footer -->
+              <div style="background-color: #f8f9fa; padding: 24px 30px; border-top: 1px solid #e2e8f0;">
+                <p style="color: #6b7280; font-size: 12px; margin: 0; text-align: center; line-height: 1.5;">
+                  This is an automated message from AI Skill Bridge Assessment Platform.<br>
+                  Please do not reply to this email.
+                </p>
+              </div>
             </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${quizLink}" style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                🚀 Start Quiz Now
-              </a>
-            </div>
-            
-            <p style="color: #6c757d; font-size: 14px; text-align: center;">
-              Good luck! 🍀
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
-            <p style="color: #868e96; font-size: 12px; text-align: center;">
-              This is an automated message. Please do not reply to this email.
-            </p>
-          </div>
+          </body>
+          </html>
         `;
 
         await emailTool.invoke({
           to: student.email,
-          subject: `🎯 Quiz Invitation - ${quiz.name} (${quiz.time_per_question}s per question)`,
+          subject: `Assessment Invitation - ${quiz.name}`,
           body: emailBody,
         });
 

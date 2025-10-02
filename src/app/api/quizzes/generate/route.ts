@@ -17,12 +17,36 @@ Type: ${type}`,
     });
 
     const outputString = typeof result.output === 'string' ? result.output : JSON.stringify(result.output);
-    const questions = JSON.parse(outputString);
+    console.log('Raw LLM output:', outputString);
+    
+    let questions;
+    try {
+      questions = JSON.parse(outputString);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      console.log('Attempting to extract JSON from response...');
+      
+      // Try to extract JSON array from the response
+      const jsonMatch = outputString.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        questions = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('Could not parse questions from LLM response');
+      }
+    }
+
+    console.log('Parsed questions:', questions);
+
+    if (!Array.isArray(questions)) {
+      throw new Error('Expected questions to be an array');
+    }
 
     const questionsWithQuizId = questions.map((q: { question_text: string; options: string[]; correct_answer: string }) => ({ 
       ...q, 
       quiz_id: quizId 
     }));
+
+    console.log('Questions to insert:', questionsWithQuizId);
 
     const { error } = await supabase.from("questions").insert(questionsWithQuizId);
 

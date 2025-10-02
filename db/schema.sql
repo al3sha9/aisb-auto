@@ -16,6 +16,7 @@ CREATE TABLE quizzes (
     topics TEXT[],
     time_per_question INT,
     type VARCHAR(50),
+    is_active BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
