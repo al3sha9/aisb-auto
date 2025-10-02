@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,17 +16,29 @@ export default function AdminLoginPage() {
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [redirecting, setRedirecting] = useState(false);
 	const router = useRouter();
     const { login, isAuthenticated, loading: authLoading } = useAuth();
 
-	// If already authenticated, redirect to dashboard
-	if (!authLoading && isAuthenticated) {
-		router.replace('/admin/dashboard');
+	// Handle redirect if already authenticated
+	useEffect(() => {
+		if (!authLoading && isAuthenticated && !redirecting) {
+			setRedirecting(true);
+			setTimeout(() => {
+				router.replace('/admin/dashboard');
+			}, 100);
+		}
+	}, [isAuthenticated, authLoading, redirecting, router]);
+
+	// Show loading if auth is being checked or redirecting
+	if (authLoading || redirecting) {
 		return (
 			<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
 				<div className="text-center">
 					<Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-					<p className="text-slate-600">Redirecting to dashboard...</p>
+					<p className="text-slate-600">
+						{redirecting ? "Redirecting to dashboard..." : "Checking authentication..."}
+					</p>
 				</div>
 			</div>
 		);
@@ -36,24 +48,28 @@ export default function AdminLoginPage() {
 		e.preventDefault();
 		setLoading(true);
 		setError("");
+		
 		try {
 			const res = await fetch("/api/admin/login", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ email, password }),
 			});
+			
             if (res.ok) {
-                const data = await res.json(); // Parse the response to get the token
-                login(data.access_token); // Use the login function from AuthContext
-                router.push('/admin/dashboard'); // Redirect after successful login
+                const data = await res.json();
+                // Use the async login function which handles the redirect
+                await login(data.access_token);
             } else {
 				const data = await res.json();
-				setError(data.detail || "Login failed");
+				setError(data.detail || "Invalid credentials");
 			}
-		} catch {
-			setError("Network error");
+		} catch (error) {
+			console.error('Login error:', error);
+			setError("Network error. Please try again.");
+		} finally {
+			setLoading(false);
 		}
-		setLoading(false);
 	}
 
 	return (

@@ -2,11 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-// import Cookies from 'js-cookie'; // Removed
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  login: (token: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -19,15 +18,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
+    // Only check auth once on mount
     const checkAuth = () => {
+      if (typeof window === 'undefined') return;
+      
       try {
         const token = localStorage.getItem('admin_access_token');
-        console.log('AuthContext: Checking auth on mount. Token:', token);
-        if (token && token !== 'null' && token !== 'undefined') {
-          console.log('AuthContext: Token found, setting authenticated to true');
+        if (token && token !== 'null' && token !== 'undefined' && token.trim() !== '') {
           setIsAuthenticated(true);
         } else {
-          console.log('AuthContext: No valid token found, setting authenticated to false');
           setIsAuthenticated(false);
         }
       } catch (error) {
@@ -35,20 +34,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
-        console.log('AuthContext: Loading complete');
       }
     };
 
-    checkAuth();
+    // Small delay to prevent hydration issues
+    setTimeout(checkAuth, 100);
   }, []);
 
-  const login = (token: string) => {
+  const login = async (token: string) => {
     try {
       localStorage.setItem('admin_access_token', token);
       setIsAuthenticated(true);
-      console.log('AuthContext: Login successful, token stored:', token);
+      
+      // Use setTimeout to prevent render loop
+      setTimeout(() => {
+        router.push('/admin/dashboard');
+      }, 100);
     } catch (error) {
       console.error('Error during login:', error);
+      throw error;
     }
   };
 
