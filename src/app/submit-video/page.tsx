@@ -95,10 +95,10 @@ export default function VideoSubmissionPage() {
               
               <Alert>
                 <Trophy className="h-4 w-4" />
-                <AlertTitle>What's Next?</AlertTitle>
+                <AlertTitle>What&apos;s Next?</AlertTitle>
                 <AlertDescription>
                   Our AI agents will analyze your video and rank it against other submissions. 
-                  You'll be notified via email when winners are announced!
+                  You&apos;ll be notified via email when winners are announced!
                 </AlertDescription>
               </Alert>
             </div>

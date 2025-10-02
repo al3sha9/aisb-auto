@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
     const worksheet = workbook.Sheets[sheetName];
     const json = XLSX.utils.sheet_to_json(worksheet);
 
-    const studentsToInsert = json.map((row: any) => ({
-      name: row.name, // Assuming 'name' is the column header in Excel
-      email: row.email, // Assuming 'email' is the column header in Excel
+    const studentsToInsert = (json as Record<string, unknown>[]).map((row) => ({
+      name: row.name as string, // Assuming 'name' is the column header in Excel
+      email: row.email as string, // Assuming 'email' is the column header in Excel
     }));
 
     // Validate data before inserting
@@ -47,6 +47,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: "Students uploaded successfully", count: studentsToInsert.length }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'An error occurred' }, { status: 500 });
   }
 }

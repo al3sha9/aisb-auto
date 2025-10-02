@@ -75,7 +75,7 @@ export default function NewQuizPage() {
       toast.success("Questions generated successfully!", { id: toastId });
       router.push(`/admin/quizzes/${quizId}`);
     } catch (error) { 
-      toast.error(`Failed to create quiz: ${error.message}`, { id: toastId });
+      toast.error(`Failed to create quiz: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: toastId });
     } finally {
       setLoading(false);
     }

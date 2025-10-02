@@ -57,7 +57,12 @@ export default function QuizDetailsPage() {
     }
   }, [params.quizId]);
 
-  const handleGenerateQuestions = async () => {
+    const generateQuestions = async () => {
+    if (!quiz) {
+      toast.error("Quiz not loaded");
+      return;
+    }
+    
     setGenerating(true);
     const toastId = toast.loading("Generating questions...");
 
@@ -139,7 +144,7 @@ export default function QuizDetailsPage() {
         ) : (
           <div className="text-center py-8 border rounded">
             <p className="mb-4">No questions have been generated for this quiz yet.</p>
-            <Button onClick={handleGenerateQuestions} disabled={generating}>
+            <Button onClick={generateQuestions} disabled={generating}>
               {generating ? "Generating..." : "Generate Questions with AI"}
             </Button>
           </div>

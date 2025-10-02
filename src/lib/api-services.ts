@@ -70,7 +70,7 @@ export interface AgentLog {
 export const adminApi = {
   // Authentication
   login: (email: string, password: string) =>
-    apiClient.post<{ access_token: string; admin: any }>('/api/admin/login', { email, password }),
+    apiClient.post<{ access_token: string; admin: Record<string, unknown> }>('/api/admin/login', { email, password }),
   
   register: (name: string, email: string, password: string) =>
     apiClient.post<{ message: string }>('/api/admin/register', { name, email, password }),
@@ -161,7 +161,7 @@ export const agentApi = {
     apiClient.get<AgentLog[]>('/api/agents/logs'),
   
   // Start quiz generation workflow
-  startQuizGeneration: (excelData?: any) =>
+  startQuizGeneration: (excelData?: unknown) =>
     apiClient.post<{ message: string; task_id: string }>('/api/agents/start-quiz-generation', excelData),
   
   // Start video processing workflow
@@ -170,5 +170,5 @@ export const agentApi = {
   
   // Get workflow status
   getWorkflowStatus: (taskId: string) =>
-    apiClient.get<{ status: string; result?: any }>(`/api/agents/status/${taskId}`),
+    apiClient.get<{ status: string; result?: unknown }>(`/api/agents/status/${taskId}`),
 }

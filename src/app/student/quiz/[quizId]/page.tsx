@@ -1,19 +1,39 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import toast from "react-hot-toast";
 
-export default function TakeQuizPage() {
+interface Question {
+  id: number;
+  question_text: string;
+  options: string[];
+  correct_answer: string;
+}
+
+interface Quiz {
+  id: number;
+  name: string;
+  time_per_question: number;
+  questions: Question[];
+}
+
+interface Student {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export default function StudentQuizPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const studentId = searchParams.get('student');
   
-  const [quiz, setQuiz] = useState<any>(null);
-  const [student, setStudent] = useState<any>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [student, setStudent] = useState<Student | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -47,7 +67,11 @@ export default function TakeQuizPage() {
           if (studentError) {
             console.warn('Student not found:', studentError.message);
           } else {
-            setStudent(studentData);
+            setStudent({
+              id: 0, // Placeholder since we don't use the id
+              name: studentData.name,
+              email: studentData.email
+            });
           }
         }
       } catch (error) {
@@ -72,9 +96,11 @@ export default function TakeQuizPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, quiz]);
+  }, [timeLeft, quiz, handleNextQuestion]);
 
-  const handleNextQuestion = async () => {
+  const handleNextQuestion = useCallback(async () => {
+    if (!quiz) return;
+    
     // Save the answer
     if (selectedAnswer) {
       const { error } = await supabase.from("answers").insert([
@@ -101,7 +127,7 @@ export default function TakeQuizPage() {
       toast.success("Quiz finished!");
       // TODO: Redirect to results page
     }
-  };
+  }, [quiz, selectedAnswer, studentId, currentQuestionIndex]);
 
   if (loading) {
     return <div>Loading...</div>;

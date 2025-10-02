@@ -14,7 +14,7 @@ export default function SubmitVideoPage() {
   
   const [youtubeLink, setYoutubeLink] = useState("");
   const [loading, setLoading] = useState(false);
-  const [student, setStudent] = useState<any>(null);
+  const [student, setStudent] = useState<{name: string; email: string} | null>(null);
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -80,7 +80,7 @@ export default function SubmitVideoPage() {
             🎉 Congratulations, {student.name}!
           </h2>
           <p className="text-green-700">
-            You've been selected to move to the next phase! Please submit your video below.
+            You&apos;ve been selected to move to the next phase! Please submit your video below.
           </p>
         </div>
       )}
