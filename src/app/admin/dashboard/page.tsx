@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+// import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -44,25 +44,25 @@ interface Question {
 //   timeSpent: number
 // }
 
-interface AdminUser {
-  id: number
-  email: string
-}
+// interface AdminUser {
+//   id: number
+//   email: string
+// }
 
 export default function AdminDashboard() {
-  const router = useRouter()
+  // const router = useRouter()
 
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
+  // const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
 
 
 
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token')
-    localStorage.removeItem('admin_user')
-    router.push('/admin/login')
-  }
+  // const handleLogout = () => {
+  //   localStorage.removeItem('admin_token')
+  //   localStorage.removeItem('admin_user')
+  //   router.push('/admin/login')
+  // }
 
   const [sending, setSending] = useState(false)
 
@@ -71,25 +71,10 @@ export default function AdminDashboard() {
 
 
 
-  // Check authentication on mount
+  // Load dashboard data without authentication check
   useEffect(() => {
-    const token = localStorage.getItem('admin_token')
-    const userData = localStorage.getItem('admin_user')
-
-    if (!token || !userData) {
-      router.push('/admin/login')
-      return
-    }
-
-    try {
-      setAdminUser(JSON.parse(userData))
-    } catch {
-      router.push('/admin/login')
-      return
-    }
-
     fetchData()
-  }, [router])
+  }, [])
 
   const fetchData = async () => {
     try {
@@ -307,7 +292,7 @@ export default function AdminDashboard() {
                         <h4 className="font-medium text-sm">Preview Questions:</h4>
                         {quiz.questions.slice(0, 3).map((q, idx) => (
                           <div key={q.id} className="text-sm text-muted-foreground pl-4">
-                            {idx + 1}. {q.question.substring(0, 80)}...
+                            {idx + 1}. {q.question ? q.question.substring(0, 80) + '...' : 'No question text'}
                           </div>
                         ))}
                         {quiz.questions.length > 3 && (

@@ -1,8 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,44 +11,32 @@ import Image from "next/image";
 import LOGO from "../../../../public/loguss.png";
 
 export default function AdminLoginPage() {
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
+	const [email, setEmail] = useState("admin@typs.dev");
+	const [password, setPassword] = useState("123");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-	const router = useRouter();
-    const { login } = useAuth();
+	const { signIn } = useAuth();
 
-	// Check if already logged in
-	useEffect(() => {
-		if (typeof window !== 'undefined' && localStorage.getItem('admin_access_token')) {
-			router.push('/admin/dashboard');
-		}
-	}, [router]);
+	// The middleware will handle redirects automatically
+	// No need for manual redirects here to prevent loops
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
+		console.log('Login attempt with:', { email, password });
 		setLoading(true);
 		setError("");
 		
 		try {
-			const res = await fetch("/api/admin/login", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ email, password }),
-			});
+			console.log('Calling signIn...');
+			await signIn(email, password);
+			console.log('SignIn successful!');
 			
-            if (res.ok) {
-                const data = await res.json();
-                login(data.access_token);
-                // Simple redirect
-                window.location.href = '/admin/dashboard';
-            } else {
-				const data = await res.json();
-				setError(data.detail || "Invalid credentials");
-			}
+			// Force redirect after successful login
+			console.log('Redirecting to dashboard...');
+			window.location.href = '/admin/dashboard';
 		} catch (error) {
 			console.error('Login error:', error);
-			setError("Network error. Please try again.");
+			setError(error instanceof Error ? error.message : "Invalid credentials");
 		} finally {
 			setLoading(false);
 		}

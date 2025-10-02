@@ -4,27 +4,17 @@ import React from "react"
 import { usePathname } from "next/navigation"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
-import { AuthProvider, useAuth } from "@/context/AuthContext"
+import { AuthProvider } from "@/context/AuthContext"
 
 function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const { isAuthenticated } = useAuth()
 
-  // Login page - no protection needed
+  // Login page - render without sidebar
   if (pathname === '/admin/login') {
     return <>{children}</>
   }
 
-  // Check if user has token
-  const hasToken = typeof window !== 'undefined' && localStorage.getItem('admin_access_token')
-
-  // Protected pages - simple check
-  if (!isAuthenticated && !hasToken) {
-    window.location.href = '/admin/login'
-    return <div>Redirecting to login...</div>
-  }
-
-  // Show admin layout
+  // All other admin pages - show admin layout (no auth required)
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">

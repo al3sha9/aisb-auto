@@ -7,16 +7,8 @@ export default function AdminPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('admin_token')
-    
-    if (token) {
-      // Redirect to dashboard if authenticated
-      router.push('/admin/dashboard')
-    } else {
-      // Redirect to login if not authenticated
-      router.push('/admin/login')
-    }
+    // Always redirect to dashboard (no authentication required)
+    router.push('/admin/dashboard')
   }, [router])
 
   return (

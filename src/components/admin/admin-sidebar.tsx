@@ -64,7 +64,7 @@ const navigation = [
 
 export function AdminSidebar() {
   const [isDarkMode, setIsDarkMode] = useState(false)
-  const { logout } = useAuth()
+  const { signOut } = useAuth()
 
   // Check for saved theme preference or default to light mode
   useEffect(() => {
@@ -150,7 +150,7 @@ export function AdminSidebar() {
             variant="destructive" 
             className="w-full justify-start" 
             size="sm"
-            onClick={logout}
+            onClick={signOut}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Logout
