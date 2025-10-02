@@ -1,5 +1,6 @@
 "use client"
 
+import React, { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
@@ -10,21 +11,33 @@ function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
 
+  // Handle authentication-based redirects with useEffect to avoid rendering loops
+  useEffect(() => {
+    if (!loading) {
+      if (!isAuthenticated && pathname !== '/admin/login') {
+        router.replace('/admin/login')
+      } else if (isAuthenticated && pathname === '/admin/login') {
+        router.replace('/admin/dashboard')
+      }
+    }
+  }, [isAuthenticated, loading, pathname, router])
+
   // If authentication check is still in progress, show loading
   if (loading) {
-    return <div>Loading authentication...</div>
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading...</div>
+      </div>
+    )
   }
 
-  // If authentication check is complete AND user is not authenticated AND not on login page, redirect
+  // Don't render anything while redirecting
   if (!isAuthenticated && pathname !== '/admin/login') {
-    router.push('/admin/login')
-    return null // Render nothing while redirecting
+    return null
   }
 
-  // If authenticated and on the login page, redirect to dashboard
   if (isAuthenticated && pathname === '/admin/login') {
-    router.push('/admin/dashboard')
-    return null // Render nothing while redirecting
+    return null
   }
 
   // Don't show sidebar on login page

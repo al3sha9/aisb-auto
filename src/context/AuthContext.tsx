@@ -19,25 +19,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_access_token'); // Changed
-    console.log('AuthContext: Checking for token. Found:', token ? 'Yes' : 'No');
-    if (token) {
-      setIsAuthenticated(true);
-    }
-    setLoading(false);
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem('admin_access_token');
+        if (token && token !== 'null' && token !== 'undefined') {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = (token: string) => {
-    localStorage.setItem('admin_access_token', token); // Changed
-    console.log('AuthContext: Token set. Value:', localStorage.getItem('admin_access_token') ? 'Yes' : 'No');
-    setIsAuthenticated(true);
-    router.push('/admin/dashboard');
+    try {
+      localStorage.setItem('admin_access_token', token);
+      setIsAuthenticated(true);
+      // Don't redirect here - let the layout handle it
+    } catch (error) {
+      console.error('Error during login:', error);
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('admin_access_token'); // Changed
-    setIsAuthenticated(false);
-    router.push('/admin/login');
+    try {
+      localStorage.removeItem('admin_access_token');
+      setIsAuthenticated(false);
+      router.push('/admin/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   return (

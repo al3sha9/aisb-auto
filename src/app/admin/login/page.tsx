@@ -1,26 +1,13 @@
 "use client";
-import { useState, useEffect } from "react"; // Import useEffect
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext"; // Import useAuth
+import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLoginPage() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
-	const router = useRouter();
-    const { isAuthenticated, login, loading: authLoading } = useAuth(); // Use useAuth hook
-
-    // Redirect if already authenticated
-    useEffect(() => {
-        if (isAuthenticated && !authLoading) {
-            router.push("/admin/dashboard");
-        }
-    }, [isAuthenticated, authLoading, router]);
-
-    if (authLoading) {
-        return <div>Loading...</div>; // Or a spinner
-    }
+    const { login } = useAuth();
 
 	async function handleSubmit(e: React.FormEvent) {
 		e.preventDefault();
