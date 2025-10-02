@@ -23,11 +23,13 @@ import {
   Trophy, 
   Settings,
   Sun,
-  Moon
+  Moon,
+  LogOut
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import LOGUS from "../../../public/loguss.png"
+import { useAuth } from "@/context/AuthContext"
 
 const navigation = [
   {
@@ -62,6 +64,7 @@ const navigation = [
 
 export function AdminSidebar() {
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const { logout } = useAuth()
 
   // Check for saved theme preference or default to light mode
   useEffect(() => {
@@ -129,7 +132,7 @@ export function AdminSidebar() {
       </SidebarContent>
       
       <SidebarFooter>
-        <div className="p-4">
+        <div className="p-4 space-y-2">
           <Button 
             variant="outline" 
             className="w-full justify-start" 
@@ -142,6 +145,15 @@ export function AdminSidebar() {
               <Moon className="h-4 w-4 mr-2" />
             )}
             {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+          </Button>
+          <Button 
+            variant="destructive" 
+            className="w-full justify-start" 
+            size="sm"
+            onClick={logout}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
           </Button>
           <p className="text-xs text-muted-foreground mt-2 text-center">
             ali@typs.dev

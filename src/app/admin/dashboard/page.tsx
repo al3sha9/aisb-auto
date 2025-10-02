@@ -175,22 +175,7 @@ export default function AdminDashboard() {
             Manage students, generate AI-powered quizzes, and track results
           </p>
         </div>
-
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Shield className="h-4 w-4" />
-                    <span>{adminUser?.email}</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="flex items-center space-x-2"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Logout</span>
-                  </Button>
-                </div>      </div>
+    </div>
 
 
 
@@ -218,7 +203,7 @@ export default function AdminDashboard() {
 
 
 
-              </div>
+      </div>
 
       {/* Main Tabs */}
       <Tabs defaultValue="students" className="space-y-4">

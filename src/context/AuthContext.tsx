@@ -22,9 +22,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const checkAuth = () => {
       try {
         const token = localStorage.getItem('admin_access_token');
+        console.log('AuthContext: Checking auth on mount. Token:', token);
         if (token && token !== 'null' && token !== 'undefined') {
+          console.log('AuthContext: Token found, setting authenticated to true');
           setIsAuthenticated(true);
         } else {
+          console.log('AuthContext: No valid token found, setting authenticated to false');
           setIsAuthenticated(false);
         }
       } catch (error) {
@@ -32,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(false);
       } finally {
         setLoading(false);
+        console.log('AuthContext: Loading complete');
       }
     };
 
@@ -42,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.setItem('admin_access_token', token);
       setIsAuthenticated(true);
-      // Don't redirect here - let the layout handle it
+      console.log('AuthContext: Login successful, token stored:', token);
     } catch (error) {
       console.error('Error during login:', error);
     }

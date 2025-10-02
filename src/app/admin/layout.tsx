@@ -1,26 +1,21 @@
 "use client"
 
-import React, { useEffect } from "react"
-import { usePathname, useRouter } from "next/navigation"
+import React from "react"
+import { usePathname } from "next/navigation"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { AuthProvider, useAuth } from "@/context/AuthContext"
 
 function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
   const { isAuthenticated, loading } = useAuth()
 
-  // Handle authentication-based redirects with useEffect to avoid rendering loops
-  useEffect(() => {
-    if (!loading) {
-      if (!isAuthenticated && pathname !== '/admin/login') {
-        router.replace('/admin/login')
-      } else if (isAuthenticated && pathname === '/admin/login') {
-        router.replace('/admin/dashboard')
-      }
-    }
-  }, [isAuthenticated, loading, pathname, router])
+  console.log('ProtectedAdminLayout render:', { 
+    pathname, 
+    isAuthenticated, 
+    loading, 
+    token: typeof window !== 'undefined' ? localStorage.getItem('admin_access_token') : 'SSR' 
+  });
 
   // If authentication check is still in progress, show loading
   if (loading) {
@@ -31,22 +26,25 @@ function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Don't render anything while redirecting
-  if (!isAuthenticated && pathname !== '/admin/login') {
-    return null
+  // For login page, just render children without auth check
+  if (pathname === '/admin/login') {
+    return <>{children}</>
   }
 
-  if (isAuthenticated && pathname === '/admin/login') {
-    return null
+  // For other admin pages, check authentication
+  if (!isAuthenticated) {
+    console.log('Not authenticated, showing login prompt');
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p>Please log in to access this page.</p>
+          <a href="/admin/login" className="text-blue-500 underline">Go to Login</a>
+        </div>
+      </div>
+    )
   }
 
-  // Don't show sidebar on login page
-  const isLoginPage = pathname === '/admin/login'
-  
-  if (isLoginPage) {
-    return children
-  }
-
+  // Show admin layout with sidebar
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full">
