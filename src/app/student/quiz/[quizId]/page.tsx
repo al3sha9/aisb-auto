@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ interface Student {
   email: string;
 }
 
-export default function StudentQuizPage() {
+function StudentQuizContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const studentId = searchParams.get('student');
@@ -86,18 +86,6 @@ export default function StudentQuizPage() {
     }
   }, [params.quizId, studentId]);
 
-  useEffect(() => {
-    if (timeLeft === 0 && quiz) {
-      handleNextQuestion();
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => (prevTime > 0 ? prevTime - 1 : 0));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft, quiz, handleNextQuestion]);
-
   const handleNextQuestion = useCallback(async () => {
     if (!quiz) return;
     
@@ -128,6 +116,18 @@ export default function StudentQuizPage() {
       // TODO: Redirect to results page
     }
   }, [quiz, selectedAnswer, studentId, currentQuestionIndex]);
+
+  useEffect(() => {
+    if (timeLeft === 0 && quiz) {
+      handleNextQuestion();
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => (prevTime > 0 ? prevTime - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, quiz, handleNextQuestion]);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -184,5 +184,13 @@ export default function StudentQuizPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function StudentQuizPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-10">Loading quiz...</div>}>
+      <StudentQuizContent />
+    </Suspense>
   );
 }

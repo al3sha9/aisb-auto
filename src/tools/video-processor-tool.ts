@@ -3,7 +3,8 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
 export const videoProcessorTool = tool(
-  async ({ youtubeLink }) => {
+  async (input) => {
+    const { youtubeLink } = input as { youtubeLink: string };
     console.log(`Processing video from ${youtubeLink}`);
     // In a real application, you would use the YouTube API to get the transcript, then use a language model to evaluate it.
     return 'Video processed successfully';

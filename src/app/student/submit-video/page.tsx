@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import toast from "react-hot-toast";
 
-export default function SubmitVideoPage() {
+function SubmitVideoContent() {
   const searchParams = useSearchParams();
   const studentId = searchParams.get('student');
   
@@ -103,5 +103,13 @@ export default function SubmitVideoPage() {
         </Button>
       </form>
     </div>
+  );
+}
+
+export default function SubmitVideoPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-10">Loading...</div>}>
+      <SubmitVideoContent />
+    </Suspense>
   );
 }

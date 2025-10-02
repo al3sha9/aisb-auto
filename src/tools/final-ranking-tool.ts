@@ -3,8 +3,9 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 
 export const finalRankingTool = tool(
-  async ({ videoSubmissions }) => {
-    console.log(`Ranking video submissions`);
+  async (input) => {
+    const { videoSubmissions } = input as { videoSubmissions: Array<{ studentId: number; evaluation: string; }> };
+    console.log(`Ranking ${videoSubmissions.length} video submissions`);
     // In a real application, you would rank the video submissions based on their evaluations and notify the top students.
     return 'Final ranking and notification completed successfully';
   },
